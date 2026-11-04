@@ -4,7 +4,7 @@
 //! inspired by Arch Linux and Debian architecture.
 
 use anyhow::Result;
-use log::{info, error};
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -37,7 +37,7 @@ pub trait Component {
 }
 
 /// Component status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ComponentStatus {
     Running,
     Stopped,
@@ -46,12 +46,14 @@ pub enum ComponentStatus {
 }
 
 /// Main component implementation
-pub struct settings {
+pub struct Settings {
     config: Config,
     status: ComponentStatus,
 }
 
-impl settings {
+pub type settings = Settings;
+
+impl Settings {
     pub fn new(config: Config) -> Self {
         Self {
             config,
@@ -64,28 +66,26 @@ impl settings {
         let config: Config = serde_json::from_str(&content)?;
         Ok(Self::new(config))
     }
-}
 
-impl Component for settings {
-    fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         "SigmaOS-settings"
     }
 
-    fn version(&self) -> &str {
+    pub fn version(&self) -> &str {
         "0.1.0"
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    pub fn initialize(&mut self) -> Result<()> {
         info!("Initializing SigmaOS-settings");
         self.status = ComponentStatus::Initializing;
         
         // Initialize logging
         if self.config.debug {
-            env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug"))
-                .init();
+            let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug"))
+                .try_init();
         } else {
-            env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(&self.config.log_level))
-                .init();
+            let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(&self.config.log_level))
+                .try_init();
         }
         
         info!("Component configuration: {:?}", self.config);
@@ -93,20 +93,46 @@ impl Component for settings {
         Ok(())
     }
 
-    fn start(&mut self) -> Result<()> {
+    pub fn start(&mut self) -> Result<()> {
         info!("Starting SigmaOS-settings");
         self.status = ComponentStatus::Running;
         Ok(())
     }
 
-    fn stop(&mut self) -> Result<()> {
+    pub fn stop(&mut self) -> Result<()> {
         info!("Stopping SigmaOS-settings");
         self.status = ComponentStatus::Stopped;
         Ok(())
     }
 
-    fn status(&self) -> ComponentStatus {
+    pub fn status(&self) -> ComponentStatus {
         self.status.clone()
+    }
+}
+
+impl Component for Settings {
+    fn name(&self) -> &str {
+        Settings::name(self)
+    }
+
+    fn version(&self) -> &str {
+        Settings::version(self)
+    }
+
+    fn initialize(&mut self) -> Result<()> {
+        Settings::initialize(self)
+    }
+
+    fn start(&mut self) -> Result<()> {
+        Settings::start(self)
+    }
+
+    fn stop(&mut self) -> Result<()> {
+        Settings::stop(self)
+    }
+
+    fn status(&self) -> ComponentStatus {
+        Settings::status(self)
     }
 }
 
@@ -117,21 +143,21 @@ mod tests {
     #[test]
     fn test_component_creation() {
         let config = Config::default();
-        let component = settings::new(config);
+        let component = Settings::new(config);
         assert_eq!(component.name(), "SigmaOS-settings");
         assert_eq!(component.version(), "0.1.0");
     }
 
     #[test]
     fn test_initialization() {
-        let mut component = settings::new(Config::default());
+        let mut component = Settings::new(Config::default());
         component.initialize().unwrap();
         assert!(matches!(component.status(), ComponentStatus::Stopped));
     }
 
     #[test]
     fn test_start_stop() {
-        let mut component = settings::new(Config::default());
+        let mut component = Settings::new(Config::default());
         component.initialize().unwrap();
         component.start().unwrap();
         assert!(matches!(component.status(), ComponentStatus::Running));
