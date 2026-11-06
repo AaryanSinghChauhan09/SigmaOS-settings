@@ -27,3 +27,45 @@ impl Component for SettingsComponent {
         else { Err(error::ComponentError::Service("settings not running".to_string())) }
     }
 }
+pub mod network;
+pub mod display;
+pub mod sound;
+
+/// Settings subsystem error type.
+#[derive(Debug)]
+pub enum SettingsError {
+    ValidationError(String),
+}
+
+impl std::fmt::Display for SettingsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ValidationError(m) => write!(f, "validation error: {m}"),
+        }
+    }
+}
+
+impl std::error::Error for SettingsError {}
+
+/// Key/value store backing all settings panels.
+#[derive(Debug, Default)]
+pub struct SettingsStore {
+    values: std::collections::HashMap<String, String>,
+}
+
+impl SettingsStore {
+    pub fn new() -> Self { Self::default() }
+    pub fn set(&mut self, key: &str, value: String) {
+        self.values.insert(key.to_string(), value);
+    }
+    pub fn get(&self, key: &str) -> Option<&str> {
+        self.values.get(key).map(|s| s.as_str())
+    }
+}
+
+/// Contract implemented by every settings panel.
+pub trait SettingsPanel {
+    fn id(&self) -> &str;
+    fn title(&self) -> &str;
+    fn apply(&self, store: &mut SettingsStore) -> std::result::Result<(), SettingsError>;
+}
