@@ -69,3 +69,6 @@ pub trait SettingsPanel {
     fn title(&self) -> &str;
     fn apply(&self, store: &mut SettingsStore) -> std::result::Result<(), SettingsError>;
 }
+
+/// Module extracted from the SigmaOS-system monolith.
+pub mod settings_manager;
